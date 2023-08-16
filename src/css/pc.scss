@@ -1,0 +1,91 @@
+h1 {
+  color: #474545;
+  margin: 20px 0;
+}
+h2 {
+  color: #474545;
+  margin: 10px 0;
+}
+.list {
+  list-style: none;
+  padding: 0;
+
+}
+.list-status {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+
+}
+.comment {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #f9f9f9;
+}
+
+.comment-user {
+  font-weight: bold;
+  font-size: large;
+  color: #333;
+}
+
+.comment-message {
+  margin-top: 5px;
+}
+.comment-time {
+  text-align: right;
+}
+
+.status {
+  padding: 5px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  width: 250px; /* 固定宽度 */
+  text-align: center;
+}
+.status-name {
+  font-weight: bold;
+  font-size: large;
+  color: #333;
+}
+.v-navigation-drawer .sidebar {
+  background-color: #333;
+  color: white;
+  width: 200px;
+}
+
+.v-navigation-drawer .sidebar-header {
+  //background-color: #222;
+  padding: 20px;
+}
+
+.custom-divider {
+  margin: 30px 0; /* 上下间距 */
+}
+
+.login-info {
+  display: flex;
+  //将该组件置底
+    position: absolute;
+    bottom: 20px;
+
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  margin-left: 8px;
+}
+
+.user-name {
+  font-weight: bold;
+}
+
+.user-status {
+  font-size: 12px;
+}
