@@ -1,6 +1,5 @@
 <template>
   <v-app>
-    {{testConnection}}
     <SidebarDisplay :tasks="tasks" :loggedIn="loggedIn" :avatar="avatar" :user="user" @selectTask="selectTask"></SidebarDisplay>
 
     <v-main>
