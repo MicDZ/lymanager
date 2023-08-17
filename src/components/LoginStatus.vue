@@ -9,7 +9,7 @@
 
     </v-avatar>
     <div class="user-details">
-
+      
       <div class="user-name">{{user.group}} - {{ user.name }}</div>
     </div>
   </div>

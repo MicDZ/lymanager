@@ -1,6 +1,6 @@
 <template>
   <v-app>
-
+    {{testConnection}}
     <SidebarDisplay :tasks="tasks" :loggedIn="loggedIn" :avatar="avatar" :user="user" @selectTask="selectTask"></SidebarDisplay>
 
     <v-main>
@@ -154,6 +154,21 @@ export default {
         this.selectedTask = this.tasks[id-1];
         this.currentPage = 'taskDetail';
       }
+    },
+    testConnection() {
+
+
+// 其他事件监听和处理...
+
+//       const socket = new WebSocket('ws://61.147.227.230:60120');
+//
+// // 监听连接打开事件
+//       socket.addEventListener('open', () => {
+//         console.log('Connected to server.');
+//
+//         // 发送消息
+//         socket.send('Hello, server!');
+//       });
     }
 
 },

@@ -17,7 +17,7 @@
         </v-list-item-content>
       </v-list-item>
     </v-list>
-    <login-status :user="user" :avatar="avatar" :loggedIn="loggedIn"></login-status>
+    <login-status :user="user[0]" :avatar="avatar" :loggedIn="loggedIn"></login-status>
   </v-navigation-drawer>
 </template>
 <script>
