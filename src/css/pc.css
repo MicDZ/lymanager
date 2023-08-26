@@ -93,4 +93,79 @@ h2 {
   font-size: 12px;
 }
 
+.chat-box {
+  height: 400px;
+  border: 1px solid #ccc;
+  overflow-y: auto;
+}
+
+.message-list {
+  padding: 10px;
+  width: 300px;
+}
+
+.message {
+  margin: 5px;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.is-sender {
+  background-color: #cce0ff;
+  align-self: flex-end;
+}
+
+.input-row {
+  margin-top: 20px;
+}
+
+.v-btn {
+  width: 30px;
+  height: 30px;
+  background-color: #474545;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+  margin-top: 20px;
+}
+
+/* 表头样式 */
+th {
+  background-color: #f2f2f2;
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+/* 表格行样式 */
+td {
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+/* 隔行换色 */
+tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.MyCard {
+  margin-bottom: 10px;
+}
+
+.login-box {
+  flex-direction: column;
+  display: flex;
+  align-items: center;
+}
+.login-box .v-text-field {
+  width: 300px;
+}
+
+.avatar {
+  width: 100px;
+  margin-bottom: 30px;
+}
+
 /*# sourceMappingURL=pc.css.map */

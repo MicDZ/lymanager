@@ -8,16 +8,22 @@
     <!-- 侧边栏菜单项 -->
     <v-divider></v-divider>
     <v-list dense>
-      <v-list-item v-for="task in tasks" :key="task.id" @click="selectTask(task.id)">
+      <div v-for="unitGroup in unitGroups" :key="unitGroup.id">
+        <div v-if="unitGroup.id >= 1">
+      <v-list-item  @click="selectTask(unitGroup.id)">
+
         <v-list-item-icon>
-          <v-icon>{{ task.icon }}</v-icon>
+          <v-icon>{{ unitGroup.icon }}</v-icon>
         </v-list-item-icon>
         <v-list-item-content>
-          <v-list-item-title class="align-content-center">{{ task.name }}</v-list-item-title>
+          <v-list-item-title class="align-content-center">{{ unitGroup.name }}</v-list-item-title>
         </v-list-item-content>
+
       </v-list-item>
+        </div>
+      </div>
     </v-list>
-    <login-status :user="user[0]" :avatar="avatar" :loggedIn="loggedIn"></login-status>
+    <login-status :user="currentUser" :avatar="avatar" :loggedIn="loggedIn"></login-status>
   </v-navigation-drawer>
 </template>
 <script>
@@ -27,10 +33,10 @@ export default {
     LoginStatus,
   },
   props: {
-    tasks: null,
+    unitGroups: null,
     loggedIn: null,
     avatar: String,
-    user: null,
+    currentUser: null,
   },
   methods: {
     selectTask(id) {
