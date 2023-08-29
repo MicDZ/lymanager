@@ -1,24 +1,43 @@
-# lymanager
+# 小狼窝前端
 
-## Project setup
-```
+## 使用
+**初始化**
+```shell
 npm install
 ```
-
-### Compiles and hot-reloads for development
-```
+**编译测试**
+```shell
 npm run serve
 ```
-
-### Compiles and minifies for production
+**打包**
 ```
 npm run build
 ```
 
-### Lints and fixes files
+**Lints and fixes files**
 ```
 npm run lint
 ```
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+## 前端存储逻辑
+```js
+      users: [],
+      tasks: [],
+      units: [],
+      documents: []
+```
+**users**：用户信息，包括用户id，用户名，密码，邮箱，头像，权限等信息
+
+**tasks**：任务信息，包括任务id，任务名，任务描述，任务创建者，任务创建时间，任务截止时间，任务状态，任务参与者等信息
+
+**units**：任务单元信息，包括任务单元id，任务单元名，任务单元描述，任务单元创建者，任务单元创建时间，任务单元截止时间，任务单元状态，任务单元参与者等信息
+
+**documents**：文档信息，包括文档id，文档名，文档描述，文档创建者，文档创建时间，文档截止时间，文档状态，文档参与者等信息
+
+数据从服务器端获取，只从服务器fetch一次数据，此后的重复查询在前端进行。
+
+## TODO
+- [x] 登录
+- [x] UnitGroup界面
+- [ ] Task界面 新建Task
+- [ ] 留言板

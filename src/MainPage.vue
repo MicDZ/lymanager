@@ -57,34 +57,31 @@
           <h2>当前占用</h2>
           <div v-if="getUnit(unit).CurrentUserID===-1">无</div>
           <div v-else>
-            {{ getUser(unit.CurrentUserID).DisplayName }}
+            {{ getUser(getUnit(unit).CurrentUserID).DisplayName }}
           </div>
           <v-divider class="custom-divider"></v-divider>
           <h2>任务</h2>
           <div class="MyCard">
             <v-btn @click="addTask()" color="primary" class="float-right"><v-icon>mdi-plus-box</v-icon></v-btn>
-
             <table>
               <tbody>
+
               <td>任务名</td>
               <td>简述</td>
               <td>完成进度</td>
-
-              <tr v-for="task_ in getUnit(unit).InProgressTasks" :key="task_.id" @click="selectTask(task_)">
+              <td></td>
+              <tr v-for="task_ of getUnit(unit).InProgressTasks" :key="task_.id" @click="selectTask(task_)">
 
                 <td>{{ getTask(task_).Name }}</td>
                 <td>{{ getTask(task_).Description }}</td>
                 <td>{{ (getTask(task_).Progress*100).toFixed(2) }}%</td>
+                <td><v-btn><v-icon @click="selectTask(task_)">mdi-file-edit-outline</v-icon></v-btn></td>
               </tr>
               </tbody>
             </table>
           </div>
           <v-divider class="custom-divider"></v-divider>
         </div>
-<!--            <h2><v-icon>mdi-check-all</v-icon> 状态</h2>-->
-
-
-<!--            <StatusDisplay :task="selectedTask"></StatusDisplay>-->
             <h2><v-icon>mdi-check-all</v-icon> 任务</h2>
 
             <TaskDisplay :users="users" :tasks="unitGroup[selectedUnitGroup].tasks"></TaskDisplay>
@@ -103,6 +100,7 @@
         </template>
 
         <template v-else-if="loggedIn && currentPage === 'TaskDetail'">
+          <v-btn @click="selectUnitGroup(selectedUnitGroup)" color="primary" class="float-right"><v-icon>mdi-arrow-left</v-icon></v-btn>
           <h1>{{getUnit(getTask(selectedTask).BindUnitID).DisplayName}}</h1>
           <v-divider class="custom-divider"></v-divider>
           <h2>{{ getTask(selectedTask).Name }}</h2>
@@ -118,6 +116,13 @@
               </tbody>
             </table>
           </div>
+          <h3>文档</h3>
+
+          <v-md-editor v-if="editMode" v-model="getDocument(getTask(selectedTask).DocumentID).MarkdownBody" @save="editFile" height="400px"></v-md-editor>
+          <v-md-preview v-else :text="getDocument(getTask(selectedTask).DocumentID).MarkdownBody"></v-md-preview>
+          <v-btn v-if="!editMode" @click="editMode=true" color="primary" class="float-right"><v-icon>mdi-file-edit-outline</v-icon></v-btn>
+          <v-btn v-if="editMode" @click="editMode=false" color="primary" class="float-right"><v-icon>mdi-swap-horizontal</v-icon></v-btn>
+
         </template>
       </v-container>
     </v-main>
@@ -125,18 +130,22 @@
 </template>
 
 <script>
-//import axios from 'axios';
-//import { format } from 'date-fns';
+
 import './css/pc.css';
-//import Vuetify from 'vuetify';
 import 'vuetify/dist/vuetify.min.css';
 import StatusDisplay from "@/components/StatusDisplay.vue";
 import SidebarDisplay from "@/components/SidebarDisplay.vue";
 import TaskDisplay from "@/components/TasksDisplay.vue";
 // import CommentsDisplay from "@/components/CommentsDisplay.vue";
 import AlertBox from "@/components/AlertBox.vue";
+import {task} from "@vue/cli-plugin-eslint/ui/taskDescriptor";
 
 export default {
+  computed: {
+    task() {
+      return task
+    }
+  },
   components: {SidebarDisplay, StatusDisplay, TaskDisplay, AlertBox},
   data() {
     return {
@@ -166,6 +175,9 @@ export default {
       users: [],
       tasks: [],
       units: [],
+      documents: [],
+      currentDocumentID: null,
+      editMode: null,
       username: null,
       password: null,
       currentUser: {
@@ -187,6 +199,23 @@ export default {
     };
   },
   methods: {
+    async sendAndReceiveData(sendMessage) {
+      // 发送消息并接收响应数据
+      return new Promise((resolve) => {
+        this.socket.send(sendMessage);
+
+        this.socket.addEventListener('message', (event) => {
+          const receivedData = event.data;
+          console.log('Received message:', receivedData);
+          resolve(receivedData); // 将响应数据传递给调用者
+        });
+      });
+
+    },
+    async sendData(sendMessage) {
+      // 发送消息
+      this.socket.send(sendMessage);
+    },
     throwAlert(message) {
       this.showDialog = true;
       this.alertMessage = message;
@@ -195,20 +224,22 @@ export default {
       // 添加任务
       //todo
     },
-
-    async sendAndReceiveData(sendMessage) {
-      // 发送消息并接收响应数据
-      return new Promise((resolve) => {
-          this.socket.send(sendMessage);
-
-          this.socket.addEventListener('message', (event) => {
-            const receivedData = event.data;
-            console.log('Received message:', receivedData);
-            resolve(receivedData); // 将响应数据传递给调用者
-          });
-        });
-
+    editFile(text) {
+      this.editMode=true;
+      this.getDocument(this.getTask(this.selectedTask).DocumentID).MarkdownBody = text;
+      try {
+        this.sendData("!update document "
+            + this.getTask(this.selectedTask).DocumentID
+            + " "
+            + JSON.stringify(this.getDocument(this.getTask(this.selectedTask).DocumentID)));
+        this.throwAlert("保存成功");
+      }
+      catch (error) {
+        this.throwAlert("服务器未响应");
+      }
+      //todo
     },
+
     getUser(userID) {
       console.log("Get user "+userID+".");
       return this.users.find(item => item.ID === userID);
@@ -264,7 +295,9 @@ export default {
               try {
                 const task = JSON.parse(message);
                 await this.fetchUser(task.InChargeUsers);
+                await this.fetchDocument([task.DocumentID]);
                 task.ID=taskID;
+
                 this.tasks.push(task);
               } catch (error) {
                 this.throwAlert("Json解析错误");
@@ -276,33 +309,6 @@ export default {
         }
       }
     },
-
-    // async fetchUnitDetail(UnitID) {
-    //
-    //   let unit = null;
-    //   //console.log("Fetch unit detail "+UnitID+".");
-    //   try {
-    //     const message = await this.sendAndReceiveData('?unit id ' + UnitID);
-    //     if (message.charAt(0) === '-') {
-    //       console.log('获取单位详情失败');
-    //       this.throwAlert("获取单位详情失败");
-    //       return null;
-    //     }
-    //     else {
-    //       // 其他情况
-    //       try {
-    //         unit = JSON.parse(message);
-    //       } catch (error) {
-    //         this.throwAlert("Json解析错误");
-    //       }
-    //     }
-    //   }
-    //   catch (error) {
-    //     this.throwAlert("服务器未响应");
-    //       console.error('Error:', error);
-    //     }
-    //   return unit;
-    // },
     getUnit(unitID) {
       console.log("Get unit "+unitID+".");
       return this.units.find(item => item.ID === unitID);
@@ -391,26 +397,13 @@ export default {
         } catch (error) {
           console.error('Error:', error);
         }
-        //foundUnitGroup.unitsList = this.fetchUnitsList(id);
-        // console.log("123");
-        // console.log(this.currentUnitGroup);
-        // for (let unitID in foundUnitGroup.unitsList) {
-        //   foundUnitGroup.detail.push(this.fetchUnitDetail(unitID));
-        // }
-
-        // for(let unitID of this.currentUnitGroup.unitsList) {
-        //   const unit = await this.fetchUnitDetail(unitID);
-        //   this.currentUnitGroup.detail.push(unit);
-        //   await this.fetchUser(unit.InChargeUsers);
-        //   await this.fetchUser([unit.CurrentUserID]);
-        //   await this.fetchTask(unit.InProgressTasks)
-        // }
         this.currentPage = 'UnitGroupDetail';
       }
     },
     selectTask(task) {
       this.currentPage = 'TaskDetail';
       this.selectedTask = task;
+      this.currentDocumentID = this.getTask(task).DocumentID;
     },
     async logIn(username, password) {
       console.log("Try login.");
@@ -464,70 +457,17 @@ export default {
         console.log('Connection closed:', event.reason);
       });
 
-
-
-// 其他事件监听和处理...
-
-//       const socket = new WebSocket('ws://61.147.227.230:60120');
-//
-// // 监听连接打开事件
-//       socket.addEventListener('open', () => {
-//         console.log('Connected to server.');
-//
-//         // 发送消息
-//         socket.send('Hello, server!');
-//       });
-
 },
   created() {
-    this.socket = new WebSocket('ws://192.168.31.249:6363');
+    this.socket = new WebSocket('ws://127.0.0.1:6363');
     //如果连接失败
     this.socket.onerror = function () {
       console.log("连接失败");
       this.showDialog = true;
       this.alertMessage = "服务器连接失败";
     };
-
+    this.editMode=false;
   }
-//
-//     login() {
-//       // 发送登录请求到后端
-//   axios.post('/api/login', { username: this.username, password: this.password })
-//   .then(response => {
-//   if (response.data.success) {
-//   this.loggedIn = true;
-//   this.fetchTasks();
-//
-// }
-//
-// });
-//       // this.loggedIn = true;
-//       // this.fetchTasks();
-//     },
-//     fetchTasks() {
-//       // 获取任务列表数据
-//       axios.get('/api/tasks')
-//           .then(response => {
-//             this.tasks = response.data;
-//           });
-//     },
-//     fetchTaskDddlils(taskId) {
-//       // 获取任务详情数据
-//       axios.get(`/api/tasks/${taskId}`)
-//           .then(response => {
-//             this.selectedTask = response.data;
-//           });
-//     },
-//     addComment() {
-//       // 提交新留言
-//       const taskId = this.selectedTask.id;
-//       axios.post(`/api/tasks/${taskId}/comments`, {message: this.newComment})
-//           .then(response => {
-//             this.selectedTask.comments.push(response.data);
-//             this.newComment = '';
-//           });
-//     }
-
 };
 </script>
 
