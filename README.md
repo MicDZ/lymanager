@@ -19,12 +19,16 @@ npm run build
 npm run lint
 ```
 
+## 前端界面逻辑
+前端界面使用Vue.js框架进行开发，使用Vuetify进行界面设计。
+前端主界面位于`src/MainPage.vue`。主界面包含导航栏和主体部分，主体部分根据导航栏的选择显示不同的界面。导航栏内容模块化设计。主体部分暂未进行模块化设计。
+
 ## 前端存储逻辑
 ```js
-      users: [],
-      tasks: [],
-      units: [],
-      documents: []
+users: [],
+tasks: [],
+units: [],
+documents: []
 ```
 **users**：用户信息，包括用户id，用户名，密码，邮箱，头像，权限等信息
 
