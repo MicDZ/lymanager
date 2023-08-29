@@ -66,16 +66,16 @@
             <table>
               <tbody>
 
-              <td>任务名</td>
-              <td>简述</td>
-              <td>完成进度</td>
-              <td></td>
-              <tr v-for="task_ of getUnit(unit).InProgressTasks" :key="task_.id" @click="selectTask(task_)">
+              <td class="font-weight-bold">任务名</td>
+              <td class="font-weight-bold">简述</td>
+              <td class="font-weight-bold">完成进度</td>
+              <td class="font-weight-bold">操作</td>
+              <tr v-for="task_ of getUnit(unit).InProgressTasks" :key="task_.id">
 
                 <td>{{ getTask(task_).Name }}</td>
                 <td>{{ getTask(task_).Description }}</td>
                 <td>{{ (getTask(task_).Progress*100).toFixed(2) }}%</td>
-                <td><v-btn><v-icon @click="selectTask(task_)">mdi-file-edit-outline</v-icon></v-btn></td>
+                <td><v-btn @click="selectTask(task_)"><v-icon>mdi-arrow-right</v-icon></v-btn></td>
               </tr>
               </tbody>
             </table>
