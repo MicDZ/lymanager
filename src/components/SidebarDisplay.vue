@@ -37,7 +37,7 @@ import LoginStatus from "@/components/LoginStatus.vue";
 export default {
   data() {
     return {
-      drawerOpen: false,
+      drawerOpen: true,
     };
   },
   components: {

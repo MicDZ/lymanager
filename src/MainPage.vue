@@ -136,6 +136,7 @@
 </template>
 
 <script>
+import Cookies from 'js-cookie';
 
 import './css/pc.css';
 import 'vuetify/dist/vuetify.min.css';
@@ -143,6 +144,7 @@ import StatusDisplay from "@/components/StatusDisplay.vue";
 import SidebarDisplay from "@/components/SidebarDisplay.vue";
 import TaskDisplay from "@/components/TasksDisplay.vue";
 import InputBox from "@/components/InputBox.vue";
+
 // import CommentsDisplay from "@/components/CommentsDisplay.vue";
 import AlertBox from "@/components/AlertBox.vue";
 import {task} from "@vue/cli-plugin-eslint/ui/taskDescriptor";
@@ -156,6 +158,8 @@ export default {
   components: {SidebarDisplay, StatusDisplay, TaskDisplay, AlertBox, InputBox},
   data() {
     return {
+      userToken: Cookies.get('user_token') || '',
+
       currentTitle: null,
       userInputSubmitted: null,
       connected: true,
@@ -265,17 +269,17 @@ export default {
       this.alertMessage = message;
     },
     async addTask(Unit) {
-      const newTask = await this.sendAndReceiveData("+task {}");
+      const newTask = await this.sendAndReceiveData("+task {\"BindUnitID\":"+Unit+"}");
       await this.fetchTask([newTask]);
-      const task = this.getTask(newTask);
-      task.BindUnitID=Unit;
-      this.tasks.push(task);
-      this.getUnit(Unit).InProgressTasks.push(newTask);
-      await this.sendData("!update task " +
-          newTask +
-          " " +
-          JSON.stringify(task)
-      );
+      // const task = this.getTask(newTask);
+      // task.BindUnitID=Unit;
+      // this.tasks.push(task);
+      // this.getUnit(Unit).InProgressTasks.push(newTask);
+      // await this.sendData("!update task " +
+      //     newTask +
+      //     " " +
+      //     JSON.stringify(task)
+      // );
     },
     async addUserInCharge(userInput) {
       if(userInput===null) {
@@ -568,7 +572,11 @@ export default {
         else {
           try {
             this.currentUser = JSON.parse(message);
-
+            const token = this.currentUser.Token;
+            const userName = this.currentUser.Name;
+            // 将 token 保存在 Cookie 中
+            Cookies.set('user_name', userName, { path: '/' });
+            Cookies.set('token', token, { path: '/' });
             this.loggedIn = true;
             console.log("Login success.");
           } catch (error) {
@@ -583,6 +591,38 @@ export default {
         this.throwAlert("服务器未响应");
       }
       },
+
+    async autoLogIn() {
+      const token = Cookies.get('token');
+      const userName = Cookies.get('user_name');
+      console.log("Try auto login "+userName+" "+token+".");
+      if(token==='-') {
+        return;
+      }
+      const message=await this.sendAndReceiveData('!login '+userName+' '+token);
+      if(message.charAt(0)==='-') {
+        this.throwAlert("自动登录失败");
+        Cookies.set('user_name', '-', { path: '/' });
+        Cookies.set('token', '-', { path: '/' });
+      }
+      else {
+        try {
+          this.currentUser = JSON.parse(message);
+          const token = this.currentUser.Token;
+          const userName = this.currentUser.Name;
+          // 将 token 保存在 Cookie 中
+          Cookies.set('user_name', userName, { path: '/' });
+          Cookies.set('token', token, { path: '/' });
+          this.loggedIn = true;
+          console.log("Login success.");
+        } catch (error) {
+          this.throwAlert("Json解析错误");
+        }
+        this.currentPage = 'UnitGroups';
+        await this.selectUnitGroup(1);
+
+      }
+    }
   },
     testConnection() {
       // 创建 WebSocket 连接
@@ -608,15 +648,18 @@ export default {
       });
 
 },
-  created() {
-    this.socket = new WebSocket('ws://127.0.0.1:6363');
+  async created() {
+    this.socket = new WebSocket('ws://[2001:250:4000:4408:f0fc:77be:84a6:61f]:8989');
+
     //如果连接失败
     this.socket.onerror = function () {
       console.log("连接失败");
       this.connected=false;
 
     };
+    this.socket.onopen = this.autoLogIn;
     this.editMode=false;
+
   }
 };
 </script>
