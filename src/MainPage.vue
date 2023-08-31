@@ -1,8 +1,10 @@
 <template>
   <v-app>
-    <SidebarDisplay v-if="loggedIn" :unitGroups="unitGroup" :loggedIn="loggedIn" :avatar="avatar" :currentUser="currentUser" @selectTask="selectUnitGroup"></SidebarDisplay>
+    <SidebarDisplay v-if="loggedIn" :unitGroups="unitGroup" :loggedIn="loggedIn" :avatar="avatar" :currentUser="currentUser" @selectTask="selectUnitGroup" :title="currentTitle"></SidebarDisplay>
     <alert-box v-model:show-dialog="showDialog" :message="alertMessage" />
+    <InputBox v-model="showInputBox" :message="alertMessage" @user-input="userInputSubmitted"></InputBox>
     <v-main>
+<!--      {{getInputFromUser()}}-->
       <v-container>
         <!-- 登录页面 -->
         <template v-if="!loggedIn">
@@ -38,17 +40,15 @@
         <!-- 分车详情页面 -->
         <template v-else-if="loggedIn && currentPage === 'UnitGroupDetail'">
                   <v-list>
-          <h1>{{ currentUnitGroup.name }}组</h1>
-          <v-divider class="custom-divider"></v-divider>
-
         <div v-for="unit in currentUnitGroup.unitsList" :key="unit.ID">
           <h1>{{ getUnit(unit).DisplayName }}</h1>
           <h2>负责人</h2>
           <div class="MyCard">
+            <v-btn @click="throwInputBox('添加单位负责人', unit, addUserInCharge)" color="primary" class="float-right"><v-icon>mdi-plus-box</v-icon></v-btn>
             <table>
               <tbody>
               <tr v-for="user_ of getUnit(unit).InChargeUsers" :key="user_.ID">
-                <td>{{  getUser(user_).DisplayName }}</td>
+                <td @click="throwInputBox('修改负责人', getTask(task_), updateTaskName)">{{  getUser(user_).DisplayName }}</td>
                 <td>{{ techGroup[getUser(user_).TechGroup[0]].name }}</td>
               </tr>
               </tbody>
@@ -57,24 +57,30 @@
           <h2>当前占用</h2>
           <div v-if="getUnit(unit).CurrentUserID===-1">无</div>
           <div v-else>
+            {{console.log(users)}}
             {{ getUser(getUnit(unit).CurrentUserID).DisplayName }}
           </div>
           <v-divider class="custom-divider"></v-divider>
           <h2>任务</h2>
           <div class="MyCard">
-            <v-btn @click="addTask()" color="primary" class="float-right"><v-icon>mdi-plus-box</v-icon></v-btn>
+            <v-btn @click="addTask(unit)" color="primary" class="float-right"><v-icon>mdi-plus-box</v-icon></v-btn>
             <table>
               <tbody>
-
               <td class="font-weight-bold">任务名</td>
               <td class="font-weight-bold">简述</td>
+              <td class="font-weight-bold">开始时间</td>
+              <td class="font-weight-bold">预期时间</td>
               <td class="font-weight-bold">完成进度</td>
-              <td class="font-weight-bold">操作</td>
-              <tr v-for="task_ of getUnit(unit).InProgressTasks" :key="task_.id">
+              <td class="font-weight-bold">时间进度</td>
+              <td class="font-weight-bold">查看详情</td>
+              <tr v-for="task_ of getUnit(unit).InProgressTasks" :key="task_">
+                <td @click="throwInputBox('修改任务名称', getTask(task_), updateTaskName)">{{ getTask(task_).Name }}</td>
+                <td @click="throwInputBox('修改任务简述', getTask(task_), updateTaskDescription)">{{ getTask(task_).Description }}</td>
+                <td @click="throwInputBox('修改任务开始时间（2023-08-26 22:43:00）', getTask(task_), updateTaskStartTime)">{{ getTask(task_).StartTime }}</td>
+                <td @click="throwInputBox('修改任务预期时间（2023-08-26 22:43:00）', getTask(task_), updateTaskDeadLine)">{{ getTask(task_).DeadLine }}</td>
 
-                <td>{{ getTask(task_).Name }}</td>
-                <td>{{ getTask(task_).Description }}</td>
-                <td>{{ (getTask(task_).Progress*100).toFixed(2) }}%</td>
+                <td @click="throwInputBox('格式为0.3', getTask(task_), updateTaskProgress)">{{ (getTask(task_).Progress*100).toFixed(0) }}%</td>
+                <td>{{ (((Date.now()-stringToTime(getTask(task_).StartTime))/(stringToTime(getTask(task_).DeadLine)-stringToTime(getTask(task_).StartTime)))*100).toFixed(2) }}%</td>
                 <td><v-btn @click="selectTask(task_)"><v-icon>mdi-arrow-right</v-icon></v-btn></td>
               </tr>
               </tbody>
@@ -136,6 +142,7 @@ import 'vuetify/dist/vuetify.min.css';
 import StatusDisplay from "@/components/StatusDisplay.vue";
 import SidebarDisplay from "@/components/SidebarDisplay.vue";
 import TaskDisplay from "@/components/TasksDisplay.vue";
+import InputBox from "@/components/InputBox.vue";
 // import CommentsDisplay from "@/components/CommentsDisplay.vue";
 import AlertBox from "@/components/AlertBox.vue";
 import {task} from "@vue/cli-plugin-eslint/ui/taskDescriptor";
@@ -146,13 +153,23 @@ export default {
       return task
     }
   },
-  components: {SidebarDisplay, StatusDisplay, TaskDisplay, AlertBox},
+  components: {SidebarDisplay, StatusDisplay, TaskDisplay, AlertBox, InputBox},
   data() {
     return {
+      currentTitle: null,
+      userInputSubmitted: null,
+      connected: true,
       loggedIn: false,
       showDialog: false,
+      showInputBox: false,
       alertMessage: null,
+      dialogVisible: false,
+      userInput: '',
       currentUnitGroup: null,
+      currentEdit: {
+        father: null,
+        son: null
+      },
       unitGroup: [
         {name: '未知', id: 0},
         {name: '英雄', id: 1,
@@ -199,6 +216,33 @@ export default {
     };
   },
   methods: {
+    stringToTime(stringTime) {
+
+      console.log(stringTime);
+      // 将字符串分割为日期部分和时间部分
+      const [datePart, timePart] = stringTime.split(' ');
+// 将日期部分分割为年、月、日
+      const [year, month, day] = datePart.split('-');
+// 将时间部分分割为小时、分钟、秒
+      const [hour, minute, second] = timePart.split(':');
+// 使用Date构造函数创建Date对象
+      const convertedDate = new Date(year, month - 1, day, hour, minute, second);
+
+      return convertedDate;
+    },
+    displayTime(time) {
+      if(time<0) {
+        //TODO
+      }
+      else {
+        const days = Math.floor(time/1000/60/60/24);
+        const hours = Math.floor(time/1000/60/60%24);
+        const minutes = Math.floor(time/1000/60%60);
+        const seconds = Math.floor(time/1000%60);
+        return `${days}天${hours}小时${minutes}分钟${seconds}秒`;
+      }
+    },
+
     async sendAndReceiveData(sendMessage) {
       // 发送消息并接收响应数据
       return new Promise((resolve) => {
@@ -220,9 +264,37 @@ export default {
       this.showDialog = true;
       this.alertMessage = message;
     },
-    async addTask() {
-      // 添加任务
-      //todo
+    async addTask(Unit) {
+      const newTask = await this.sendAndReceiveData("+task {}");
+      await this.fetchTask([newTask]);
+      const task = this.getTask(newTask);
+      task.BindUnitID=Unit;
+      this.tasks.push(task);
+      this.getUnit(Unit).InProgressTasks.push(newTask);
+      await this.sendData("!update task " +
+          newTask +
+          " " +
+          JSON.stringify(task)
+      );
+    },
+    async addUserInCharge(userInput) {
+      if(userInput===null) {
+        this.showInputBox=false;
+        return;
+      }
+      const user=await this.sendAndReceiveData("!query user user_display_name " + userInput);
+      if(user.charAt(0)==='-') {
+        this.throwAlert("用户不存在");
+      }
+      else {
+        this.getUnit(this.currentEdit).InChargeUsers.push(user.ID);
+        await this.sendData("!update unit " +
+            this.currentEdit +
+            " " +
+            JSON.stringify(this.getUnit(this.currentEdit))
+        );
+      }
+      this.showInputBox=false;
     },
     editFile(text) {
       this.editMode=true;
@@ -239,7 +311,83 @@ export default {
       }
       //todo
     },
-
+    throwInputBox(message, currentEdit, update) {
+      this.showInputBox = true;
+      this.alertMessage = message;
+      this.currentEdit = currentEdit;
+      this.userInputSubmitted=update;
+    },
+    async updateTaskProgress(userInput) {
+      if(userInput===null) {
+        this.showInputBox=false;
+        return;
+      }
+      this.currentEdit.Progress = userInput;
+      const message = await this.sendAndReceiveData("!update task "+
+          this.currentEdit.ID+
+          " "+
+          JSON.stringify(this.currentEdit)
+      );
+      if(message.charAt(0)==='-') {
+        this.throwAlert("无权限，请联系管理员");
+      }
+      else {
+        this.throwAlert("更新成功");
+      }
+      this.showInputBox=false;
+    },
+    updateTaskDescription(userInput) {
+      if(userInput===null) {
+        this.showInputBox=false;
+        return;
+      }
+      this.currentEdit.Description = userInput;
+      this.sendData("!update task "+
+          this.currentEdit.ID+
+          " "+
+          JSON.stringify(this.currentEdit)
+      );
+      this.showInputBox=false;
+    },
+    updateTaskName(userInput) {
+      if(userInput===null) {
+        this.showInputBox=false;
+        return;
+      }
+      this.currentEdit.Name = userInput;
+      this.sendData("!update task "+
+          this.currentEdit.ID+
+          " "+
+          JSON.stringify(this.currentEdit)
+      );
+      this.showInputBox=false;
+    },
+    updateTaskDeadLine(userInput) {
+      if(userInput===null) {
+        this.showInputBox=false;
+        return;
+      }
+      this.currentEdit.DeadLine = userInput;
+      this.sendData("!update task "+
+          this.currentEdit.ID+
+          " "+
+          JSON.stringify(this.currentEdit)
+      );
+      this.showInputBox=false;
+    },
+    updateTaskStartTime(userInput) {
+      if(userInput===null) {
+        this.showInputBox=false;
+        return;
+      }
+      this.currentEdit.StartTime = userInput;
+      this.sendData("!update task "+
+          this.currentEdit.ID+
+          " "+
+          JSON.stringify(this.currentEdit)
+      );
+      this.showInputBox=false;
+    },
     getUser(userID) {
       console.log("Get user "+userID+".");
       return this.users.find(item => item.ID === userID);
@@ -248,7 +396,7 @@ export default {
       for (let userID of usersID) {
         if(userID===-1) continue;
         console.log("Fetch user "+userID+".");
-        const foundUser = this.users.find(item => item.id === userID);
+        const foundUser = this.users.find(item => item.ID === userID);
         if (!foundUser) {
           try {
             const message = await this.sendAndReceiveData('?user id ' + userID);
@@ -262,7 +410,6 @@ export default {
                 const user = JSON.parse(message);
                 user.ID=userID;
                 this.users.push(user);
-
               } catch (error) {
                 this.throwAlert("Json解析错误");
               }
@@ -331,6 +478,7 @@ export default {
                 const unit = JSON.parse(message);
                 unit.ID=unitID;
                 await this.fetchUser(unit.InChargeUsers);
+                await this.fetchUser([unit.CurrentUserID]);
                 await this.fetchTask(unit.InProgressTasks);
                 this.units.push(unit);
               } catch (error) {
@@ -389,6 +537,7 @@ export default {
       else {
         this.selectedUnitGroup = id;
         this.currentUnitGroup = this.unitGroup.find(item => item.id === id);
+        this.currentTitle=this.currentUnitGroup.name+"组";
         try {
           const responseData = await this.sendAndReceiveData("?unit unit_group "+id);
           this.currentUnitGroup.unitsList=JSON.parse(responseData);
@@ -407,6 +556,7 @@ export default {
     },
     async logIn(username, password) {
       console.log("Try login.");
+
       try {
         const message = await this.sendAndReceiveData('!login '+username+' '+password);
         if(message==="-1") {
@@ -463,8 +613,8 @@ export default {
     //如果连接失败
     this.socket.onerror = function () {
       console.log("连接失败");
-      this.showDialog = true;
-      this.alertMessage = "服务器连接失败";
+      this.connected=false;
+
     };
     this.editMode=false;
   }

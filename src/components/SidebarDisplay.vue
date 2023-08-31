@@ -1,5 +1,5 @@
 <template>
-  <v-navigation-drawer app :width="180" class="sidebar">
+  <v-navigation-drawer app v-model="drawerOpen" :width="180" class="sidebar">
     <!-- 侧边栏头部 -->
     <v-list-item class="sidebar-header" @click="selectTask(0)">
       <v-icon>mdi-home</v-icon> LY manager
@@ -25,10 +25,21 @@
     </v-list>
     <login-status :user="currentUser" :avatar="avatar" :loggedIn="loggedIn"></login-status>
   </v-navigation-drawer>
+  <v-app-bar app>
+    <v-btn icon @click="toggleDrawer">
+      <v-icon>mdi-menu</v-icon>
+    </v-btn>
+    <v-toolbar-title>{{ title }}</v-toolbar-title>
+  </v-app-bar>
 </template>
 <script>
 import LoginStatus from "@/components/LoginStatus.vue";
 export default {
+  data() {
+    return {
+      drawerOpen: false,
+    };
+  },
   components: {
     LoginStatus,
   },
@@ -37,11 +48,15 @@ export default {
     loggedIn: null,
     avatar: String,
     currentUser: null,
+    title: null
   },
   methods: {
     selectTask(id) {
       this.$emit("selectTask", id);
-    }
+    },
+    toggleDrawer() {
+      this.drawerOpen = !this.drawerOpen;
+    },
   }
 }
 </script>
