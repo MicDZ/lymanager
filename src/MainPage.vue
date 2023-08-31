@@ -596,6 +596,7 @@ export default {
       const token = Cookies.get('token');
       const userName = Cookies.get('user_name');
       console.log("Try auto login "+userName+" "+token+".");
+      // 如果 Cookie 中没有 token，则不进行自动登录
       if(token==='-') {
         return;
       }
