@@ -159,13 +159,17 @@ tr:nth-child(even) {
   display: flex;
   align-items: center;
 }
-.login-box .v-text-field {
+.login-box .login-box-text-field {
   width: 300px;
 }
 
 .avatar {
   width: 100px;
   margin-bottom: 30px;
+}
+
+.v-btn {
+  background-color: #f9f9f9;
 }
 
 /*# sourceMappingURL=pc.css.map */

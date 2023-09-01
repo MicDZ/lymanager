@@ -12,8 +12,8 @@
             <h1>欢迎来到小狼窝</h1>
             <!-- 插入指定链接图片 -->
             <img src="http://qiming.hust.edu.cn/__local/A/A6/8E/98BB6679033FA4134BF39F840D7_0043A688_4077.jpg" alt="avatar" class="avatar">
-          <v-text-field v-model="username" label="用户名" class="login-box"></v-text-field>
-          <v-text-field v-model="password" label="密码" type="password" class="login-box"></v-text-field>
+          <v-text-field v-model="username" label="用户名" class="login-box-text-field"></v-text-field>
+          <v-text-field v-model="password" label="密码" type="password" class="login-box-text-field"></v-text-field>
           <v-btn @click="logIn(username, password)" color="primary">登陆</v-btn>
           <div>
 
@@ -44,12 +44,13 @@
           <h1>{{ getUnit(unit).DisplayName }}</h1>
           <h2>负责人</h2>
           <div class="MyCard">
-            <v-btn @click="throwInputBox('添加单位负责人', unit, addUserInCharge)" color="primary" class="float-right"><v-icon>mdi-plus-box</v-icon></v-btn>
+            <v-btn @click="throwInputBox('添加单位负责人', unit, addUnitUserInCharge)" color="primary" class="float-right"><v-icon>mdi-plus-box</v-icon></v-btn>
             <table>
               <tbody>
               <tr v-for="user_ of getUnit(unit).InChargeUsers" :key="user_.ID">
-                <td @click="throwInputBox('修改负责人', getTask(task_), updateTaskName)">{{  getUser(user_).DisplayName }}</td>
+                <td>{{  getUser(user_).DisplayName }}</td>
                 <td>{{ techGroup[getUser(user_).TechGroup[0]].name }}</td>
+                <td @click="deleteUnitUserInCharge(user_, unit)"><v-btn><v-icon>mdi-account-multiple-remove-outline</v-icon></v-btn></td>
               </tr>
               </tbody>
             </table>
@@ -107,12 +108,15 @@
 
         <template v-else-if="loggedIn && currentPage === 'TaskDetail'">
           <v-btn @click="selectUnitGroup(selectedUnitGroup)" color="primary" class="float-right"><v-icon>mdi-arrow-left</v-icon></v-btn>
+
           <h1>{{getUnit(getTask(selectedTask).BindUnitID).DisplayName}}</h1>
           <v-divider class="custom-divider"></v-divider>
           <h2>{{ getTask(selectedTask).Name }}</h2>
-          <h3>{{ getTask(selectedTask).Description }}</h3>
+          {{ getTask(selectedTask).Description }}
           <h3>负责人</h3>
           <div class="MyCard">
+            <v-btn @click="throwInputBox('添加单位负责人', unit, addTaskUserInCharge)" color="primary" class="float-right"><v-icon>mdi-plus-box</v-icon></v-btn>
+
             <table>
               <tbody>
               <tr v-for="user_ of getTask(selectedTask).InChargeUsers" :key="user_.ID">
@@ -137,8 +141,6 @@
 
 <script>
 import Cookies from 'js-cookie';
-
-import './css/pc.css';
 import 'vuetify/dist/vuetify.min.css';
 import StatusDisplay from "@/components/StatusDisplay.vue";
 import SidebarDisplay from "@/components/SidebarDisplay.vue";
@@ -148,7 +150,7 @@ import InputBox from "@/components/InputBox.vue";
 // import CommentsDisplay from "@/components/CommentsDisplay.vue";
 import AlertBox from "@/components/AlertBox.vue";
 import {task} from "@vue/cli-plugin-eslint/ui/taskDescriptor";
-
+import './css/pc.css';
 export default {
   computed: {
     task() {
@@ -281,7 +283,43 @@ export default {
       //     JSON.stringify(task)
       // );
     },
-    async addUserInCharge(userInput) {
+    async addUnitUserInCharge(userInput) {
+      if(userInput===null) {
+        this.showInputBox=false;
+        return;
+      }
+      const message=await this.sendAndReceiveData("!query user user_display_name " + userInput);
+      const user = JSON.parse(message);
+      if(message.charAt(0)==='-') {
+        this.throwAlert("用户不存在");
+      }
+      else {
+        if(this.getUnit(this.currentEdit).InChargeUsers.includes(user)) {
+          this.throwAlert("负责人已存在");
+          this.showInputBox=false;
+          return;
+        }
+        //await this.fetchUser(user);
+        this.getUnit(this.currentEdit).InChargeUsers.push(user);
+        console.log("++++++"+this.getUnit(this.currentEdit).InChargeUsers);
+        await this.sendData("!update unit " +
+            this.currentEdit +
+            " " +
+            JSON.stringify(this.getUnit(this.currentEdit))
+        );
+        console.log("------"+this.getUnit(this.currentEdit).InChargeUsers);
+      }
+      this.showInputBox=false;
+    },
+    deleteUnitUserInCharge(userID, unitID) {
+      this.getUnit(unitID).InChargeUsers.splice(this.getUnit(unitID).InChargeUsers.indexOf(userID), 1);
+      this.sendData("!update unit " +
+          unitID +
+          " " +
+          JSON.stringify(this.getUnit(unitID))
+      );
+    },
+    async addTaskUserInCharge(userInput) {
       if(userInput===null) {
         this.showInputBox=false;
         return;
@@ -291,6 +329,7 @@ export default {
         this.throwAlert("用户不存在");
       }
       else {
+        await this.fetchUser([user]);
         this.getUnit(this.currentEdit).InChargeUsers.push(user.ID);
         await this.sendData("!update unit " +
             this.currentEdit +
@@ -393,7 +432,8 @@ export default {
       this.showInputBox=false;
     },
     getUser(userID) {
-      console.log("Get user "+userID+".");
+      //console.log("Get user "+userID+".");
+      console.log(this.users);
       return this.users.find(item => item.ID === userID);
     },
     async fetchUser(usersID) {
@@ -650,7 +690,7 @@ export default {
 
 },
   async created() {
-    this.socket = new WebSocket('ws://[2001:250:4000:4408:f0fc:77be:84a6:61f]:8989');
+    this.socket = new WebSocket('ws://182.92.120.146:8989');
 
     //如果连接失败
     this.socket.onerror = function () {
